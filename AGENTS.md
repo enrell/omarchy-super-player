@@ -16,8 +16,9 @@ binaries.
 manifest.json       plugin manifest: id, kinds ["bar-widget"], settings schema
 Bar.qml             entry point: bar item (glyph + scrolling line + progress
                     hairline), the popup, and the settings page
-LyricsView.qml      the themed card: cover art, track header, lyrics list,
-                    media controls (bottom), track progress bar
+LyricsView.qml      the themed card: cover art (hover play/pause), track header
+                    with transport and hover-revealed volume, lyrics list, seek bar
+SliderBar.qml       knobless slider used for both the volume and the seek bar
 PlayerService.qml   MPRIS player selection, media control wrappers, LRCLIB
                     lookup, sync clock, romanization and translation
 LrcParser.js        LRC parser (multiple timestamps, offset, binary search)
@@ -79,7 +80,8 @@ PROBE_SOURCE=org.mpris.MediaPlayer2.spotify PROBE_TICKS=20 qs -p probe.qml
 ```
 
 Environment variables: `PROBE_SOURCE` (player to pin, default `Auto`),
-`PROBE_ROMANIZE`, `PROBE_TRANSLATE`, `PROBE_TICKS` (seconds to run).
+`PROBE_ROMANIZE`, `PROBE_TRANSLATE`, `PROBE_VOLUME` (force the volume bar open,
+useful for previews), `PROBE_TICKS` (seconds to run).
 
 The probe window uses the Overlay layer, so it is visible even over a fullscreen
 window. Screenshot it with `grim -g "X,Y WxH"`; OCR Latin text with
@@ -104,6 +106,12 @@ omarchy-shell super-player next              # exercise the controls
   `property var x: ({ ... })`.
 - Only one handler per signal is allowed; merge them
   (`onLinesChanged: { scheduleRomanize(); scheduleTranslate() }`).
+- Anchors are not allowed on children of a `Row`/`Column` (the positioner owns
+  their geometry). Size the child instead — that is why `SliderBar` gets
+  `height: headerControls.height` so the row's top alignment centres its track.
+- Two `Rectangle`s stacked in a positioner can silently collapse if the outer one
+  animates its width; verify with pixels, not by eye
+  (`magick card.png -crop WxH+X+Y txt: | grep -c <accent hex>`).
 - `on<Property>Changed` does **not** fire for a binding's initial value. Anchor
   state from an explicit change (player appears) instead of relying on the first
   evaluation — this is why the sync clock also anchors in `onPlayerChanged` and

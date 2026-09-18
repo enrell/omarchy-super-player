@@ -80,12 +80,25 @@ rm -rf ~/.local/share/kakasi ~/.local/bin/kakasi
 
 | Interaction | Action |
 |---|---|
-| Left click | open/close the popup (lyrics + controls) |
+| Left click | open/close the popup |
 | Right click | open the popup on its settings page |
 | Middle click | play/pause |
 | Wheel | volume, with a tooltip showing the new level |
 | Hover | tooltip with `track — artist` |
+
+Inside the popup:
+
+| Interaction | Action |
+|---|---|
+| Hover the cover art | play/pause overlay, click to toggle |
+| Previous / next buttons | skip tracks |
+| Hover the volume icon | reveals the volume bar next to it; click the icon to mute |
+| Volume bar | click or drag to set the level |
+| Seek bar (bottom) | click anywhere to jump there, press and drag to scrub |
 | Click a lyric line | seek to that line |
+
+Both bars are knobless hairlines that thicken slightly on hover to show they can
+be dragged, and they use the same colors as the rest of the shell theme.
 
 The widget hides itself while no MPRIS player is running, and (optionally) while
 the current track has no lyrics.
@@ -164,9 +177,9 @@ then the romanization, then the original.
    highlights the right line.
 4. **Romanization and translation**: both run once per track over the whole
    lyrics block and are merged into the line list (`romanized`, `translated`).
-5. **Rendering**: the card shows the cover art, the track header, the synced
-   lyrics with the current line highlighted and centered, the controls, and a
-   track progress bar. Clicking a line seeks there.
+5. **Rendering**: the card shows the cover art (hover for play/pause), the track
+   header with previous/next and the hover-revealed volume bar, the synced lyrics
+   with the current line highlighted and centered, and a draggable seek bar.
 
 ## External dependencies and network
 

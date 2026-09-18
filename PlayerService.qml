@@ -60,6 +60,7 @@ QtObject {
   readonly property bool volumeSupported: root.player !== null && root.player.volumeSupported
   readonly property bool canGoNext: root.player !== null && root.player.canGoNext
   readonly property bool canGoPrevious: root.player !== null && root.player.canGoPrevious
+  readonly property bool canSeek: root.player !== null && root.player.canSeek
   readonly property bool canTogglePlaying: root.player !== null && root.player.canTogglePlaying
   readonly property bool playing: root.player !== null && root.player.isPlaying
   property real lastVolume: 0.5

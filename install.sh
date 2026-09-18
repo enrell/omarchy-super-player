@@ -15,7 +15,7 @@ plugin_id="io.github.enrell.super-player"
 source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 target_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
 
-files=(manifest.json Bar.qml LyricsView.qml PlayerService.qml LrcParser.js romanize.py)
+files=(manifest.json Bar.qml LyricsView.qml PlayerService.qml SliderBar.qml LrcParser.js romanize.py)
 
 if [[ "${1:-}" == "--remove" ]]; then
   omarchy plugin disable "$plugin_id" 2>/dev/null || true

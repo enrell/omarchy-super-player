@@ -49,12 +49,14 @@ Scope {
       radius: Style.cornerRadius
 
       LyricsView {
+        id: cardView
         anchors.fill: parent
         anchors.topMargin: card.contentTopInset
         anchors.rightMargin: card.contentRightInset
         anchors.bottomMargin: card.contentBottomInset
         anchors.leftMargin: card.contentLeftInset
         service: media
+        volumeHover: Quickshell.env("PROBE_VOLUME") === "1"
       }
     }
   }
@@ -74,6 +76,7 @@ Scope {
         + " lines=" + media.lines.length
         + " index=" + media.currentIndex
         + " volume=" + Math.round(media.volume * 100)
+        + " revealed=" + cardView.volumeRevealed
         + " prev=" + media.canGoPrevious
         + " next=" + media.canGoNext)
       if (root.ticks >= (Number(Quickshell.env("PROBE_TICKS")) || 5)) {

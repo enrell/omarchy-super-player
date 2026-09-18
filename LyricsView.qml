@@ -3,18 +3,17 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 
-// Themed lyrics content: track header (cover art, title, artist, state), the
-// synced lyrics list and a progress bar.
+// The player card: cover art with a hover play/pause, the track header with the
+// transport and a hover-revealed volume bar, the synced lyrics and a draggable
+// seek bar.
 //
-// Shared by the bar popup (Bar.qml) and the floating panel (Floating.qml); the
-// host decides the height, the list fills the space between header and bar.
+// Hosts set the height; the lyrics list fills the space in between.
 Item {
   id: root
 
-  property QtObject bar: null      // set when hosted inside the bar
-  property var service: null       // Service instance
-  property bool interactive: true  // click a line to seek there
-  property bool showControls: true  // previous / play-pause / next, volume, mute
+  property QtObject bar: null       // set when hosted inside the bar
+  property var service: null        // PlayerService instance
+  property bool interactive: true   // click a line to seek there
   property real headerSize: Style.space(64)
   property real headerRightInset: 0 // room for a control in the host header
 
@@ -23,11 +22,16 @@ Item {
   readonly property color faint: Qt.darker(foreground, 1.8)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
+  readonly property bool playing: service !== null && service.playing
+  readonly property bool volumeRevealed: volumeHover
+  property bool volumeHover: false
+
+  // The status line only shows up when it is worth acting on; "synced lyrics"
+  // is the normal case and the controls take its place.
   readonly property string statusLabel: {
     if (!service) return ""
     switch (service.status) {
     case "loading": return "fetching lyrics…"
-    case "synced": return "synced lyrics"
     case "plain": return "unsynced lyrics"
     case "notfound": return "no lyrics found"
     case "error": return "network error"
@@ -38,7 +42,7 @@ Item {
   readonly property string emptyMessage: {
     if (!service) return ""
     switch (service.status) {
-    case "noplayer": return "No player running.\nOpen Spotify and press play."
+    case "noplayer": return "No player running.\nStart something and press play."
     case "loading": return "Fetching lyrics…"
     case "notfound": return "No lyrics found on LRCLIB."
     case "error": return "Could not fetch the lyrics.\nCheck your connection."
@@ -46,7 +50,22 @@ Item {
     return ""
   }
 
-  implicitHeight: root.headerSize + Style.space(12) + Style.space(240) + Style.space(10) + controls.height + Style.space(10) + progressBar.height
+  implicitHeight: root.headerSize + Style.space(12) + Style.space(240) + Style.space(12) + seekBar.implicitHeight
+
+  Timer {
+    id: volumeHideTimer
+    interval: 260
+    onTriggered: root.volumeHover = false
+  }
+
+  function revealVolume() {
+    volumeHideTimer.stop()
+    root.volumeHover = true
+  }
+
+  function scheduleHideVolume() {
+    volumeHideTimer.restart()
+  }
 
   // ------------------------------------------------------------------ header
   Row {
@@ -57,7 +76,9 @@ Item {
     height: root.headerSize
     spacing: Style.space(10)
 
+    // Cover art: hovering shows a play/pause glyph, clicking toggles playback.
     BorderSurface {
+      id: art
       width: root.headerSize
       height: root.headerSize
       radius: Style.spacing.labelGap
@@ -65,7 +86,7 @@ Item {
       borderSpec: Border.controlSpec("normal", root.foreground, Color.accent)
 
       Image {
-        id: art
+        id: artImage
         anchors.fill: parent
         anchors.margins: Style.space(2)
         fillMode: Image.PreserveAspectCrop
@@ -76,18 +97,51 @@ Item {
 
       Text {
         anchors.centerIn: parent
-        visible: !art.visible
+        visible: !artImage.visible
         text: "󰝚"
         color: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.displayLarge
+      }
+
+      Rectangle {
+        anchors.fill: parent
+        anchors.margins: Style.space(2)
+        radius: art.radius - Style.space(2)
+        color: Qt.rgba(0, 0, 0, 0.5)
+        opacity: artArea.containsMouse ? 1 : 0
+
+        Behavior on opacity {
+          NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+        }
+
+        Text {
+          anchors.centerIn: parent
+          text: root.playing ? "󰏤" : "󰐊"
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.display
+          scale: artArea.containsMouse ? 1.0 : 0.75
+
+          Behavior on scale {
+            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+          }
+        }
+      }
+
+      MouseArea {
+        id: artArea
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: if (root.service) root.service.togglePlaying()
       }
     }
 
     Column {
       width: parent.width - root.headerSize - Style.space(10) - root.headerRightInset
       spacing: Style.space(2)
-      anchors.verticalCenter: parent.verticalCenter
+      anchors.top: parent.top
 
       Text {
         textFormat: Text.PlainText
@@ -111,87 +165,84 @@ Item {
         visible: text !== ""
       }
 
-      Text {
-        textFormat: Text.PlainText
-        text: root.statusLabel
-        color: root.faint
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-        elide: Text.ElideRight
-        width: parent.width
-        visible: text !== ""
+      // Transport and volume, right under the artist.
+      Row {
+        id: headerControls
+        spacing: Style.space(2)
+        height: Style.spacing.controlHeight
+
+        Button {
+          width: Style.space(30)
+          horizontalPadding: 0
+          iconText: "󰒮"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          tooltipText: "Previous track"
+          enabled: root.service !== null && root.service.canGoPrevious
+          opacity: enabled ? 1.0 : 0.35
+          onClicked: root.service.previous()
+        }
+
+        Button {
+          width: Style.space(30)
+          horizontalPadding: 0
+          iconText: "󰒭"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          tooltipText: "Next track"
+          enabled: root.service !== null && root.service.canGoNext
+          opacity: enabled ? 1.0 : 0.35
+          onClicked: root.service.next()
+        }
+
+        Button {
+          id: volumeButton
+          width: Style.space(30)
+          horizontalPadding: 0
+          iconText: root.service && root.service.volume > 0.001 ? "󰕾" : "󰖁"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          tooltipText: root.service && root.service.volume > 0.001 ? "Mute" : "Unmute"
+          enabled: root.service !== null && root.service.volumeSupported
+          opacity: enabled ? 1.0 : 0.35
+          onClicked: root.service.toggleMute()
+          onHovered: function (isHovered) { isHovered ? root.revealVolume() : root.scheduleHideVolume() }
+        }
+
+        // Same design and colors as the seek bar, revealed next to the icon.
+        // Height matches the row so the Row's top alignment centres the track.
+        SliderBar {
+          id: volumeBar
+          width: root.volumeRevealed ? Style.space(110) : 0
+          height: headerControls.height
+          opacity: root.volumeRevealed ? 1 : 0
+          enabled: root.volumeRevealed && root.service !== null && root.service.volumeSupported
+          value: root.service ? root.service.volume : 0
+          trackColor: Util.alpha(root.foreground, 0.15)
+          fillColor: Color.accent
+          onMoved: function (value) { if (root.service) root.service.setVolume(value) }
+          onHoveredChanged: hovered ? root.revealVolume() : root.scheduleHideVolume()
+
+          Behavior on width {
+            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+          }
+          Behavior on opacity {
+            NumberAnimation { duration: 160 }
+          }
+        }
+
+        Text {
+          anchors.verticalCenter: parent.verticalCenter
+          textFormat: Text.PlainText
+          text: root.statusLabel
+          color: root.faint
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          elide: Text.ElideRight
+          width: Math.max(0, headerControls.width - x)
+          visible: text !== ""
+        }
       }
-    }
-  }
-
-  // ---------------------------------------------------------- media controls
-  Row {
-    id: controls
-    anchors.bottom: progressBar.top
-    anchors.bottomMargin: Style.space(12)
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: Style.spacing.controlHeight
-    spacing: Style.space(4)
-    visible: root.showControls && root.service !== null
-
-    Button {
-      iconText: "󰒮"
-      foreground: root.foreground
-      fontFamily: root.fontFamily
-      tooltipText: "Previous track"
-      enabled: root.service !== null && root.service.canGoPrevious
-      opacity: enabled ? 1.0 : 0.35
-      onClicked: root.service.previous()
-    }
-
-    Button {
-      iconText: root.service && root.service.playing ? "󰏤" : "󰐊"
-      iconSize: Style.font.iconLarge
-      foreground: root.foreground
-      fontFamily: root.fontFamily
-      tooltipText: root.service && root.service.playing ? "Pause" : "Play"
-      enabled: root.service !== null && root.service.canTogglePlaying
-      opacity: enabled ? 1.0 : 0.35
-      onClicked: root.service.togglePlaying()
-    }
-
-    Button {
-      iconText: "󰒭"
-      foreground: root.foreground
-      fontFamily: root.fontFamily
-      tooltipText: "Next track"
-      enabled: root.service !== null && root.service.canGoNext
-      opacity: enabled ? 1.0 : 0.35
-      onClicked: root.service.next()
-    }
-
-    Item {
-      width: Style.space(8)
-      height: 1
-    }
-
-    Button {
-      iconText: root.service && root.service.volume > 0.001 ? "󰕾" : "󰖁"
-      foreground: root.foreground
-      fontFamily: root.fontFamily
-      tooltipText: root.service && root.service.volume > 0.001 ? "Mute" : "Unmute"
-      enabled: root.service !== null && root.service.volumeSupported
-      opacity: enabled ? 1.0 : 0.35
-      onClicked: root.service.toggleMute()
-    }
-
-    PanelSlider {
-      id: volumeSlider
-      width: Math.max(Style.space(90), controls.width - Style.space(150))
-      anchors.verticalCenter: parent.verticalCenter
-      bar: root.bar
-      minimum: 0
-      maximum: 1
-      enabled: root.service !== null && root.service.volumeSupported
-      opacity: enabled ? 1.0 : 0.35
-      Binding on value { value: root.service ? root.service.volume : 0 }
-      onMoved: function (value) { if (root.service) root.service.setVolume(value) }
     }
   }
 
@@ -202,7 +253,7 @@ Item {
     anchors.topMargin: Style.space(12)
     anchors.left: parent.left
     anchors.right: parent.right
-    anchors.bottom: controls.visible ? controls.top : progressBar.top
+    anchors.bottom: seekBar.top
     anchors.bottomMargin: Style.space(12)
     clip: true
     model: root.service ? root.service.lines : []
@@ -379,21 +430,19 @@ Item {
     }
   }
 
-  // ---------------------------------------------------------------- progress
-  Rectangle {
-    id: progressBar
+  // -------------------------------------------------------------- seek bar
+  // Knobless: click anywhere to jump, press and drag to scrub.
+  SliderBar {
+    id: seekBar
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    height: Math.max(1, Style.space(2))
-    radius: height / 2
-    color: Util.alpha(root.foreground, 0.12)
-
-    Rectangle {
-      width: parent.width * (root.service ? root.service.progress : 0)
-      height: parent.height
-      radius: parent.radius
-      color: Color.accent
+    value: root.service ? root.service.progress : 0
+    enabled: root.service !== null && root.service.canSeek
+    trackColor: Util.alpha(root.foreground, 0.15)
+    fillColor: Color.accent
+    onCommitted: function (value) {
+      if (root.service) root.service.seekTo(value * root.service.length)
     }
   }
 }
