@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.enrell.super-player",
+  "name": "Super Player",
+  "version": "1.0.0",
+  "author": "enrell",
+  "license": "MIT",
+  "description": "Media controls and synced lyrics for whatever is playing: the line being sung right now in the bar, and a popup with transport, volume, mute and the full lyrics.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Bar.qml"
+  },
+  "barWidget": {
+    "displayName": "Super Player",
+    "description": "Shows the line being sung right now plus a progress hairline. Opens a popup with previous/play-pause/next, a volume slider, mute and the full synced lyrics, with optional romanization and translation.",
+    "category": "Media",
+    "aliases": ["super-player", "lyrics", "media", "music", "player", "karaoke"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "source": "Auto",
+      "romanize": "Off",
+      "translate": "Off",
+      "barLabel": "Lyric line",
+      "maxLabelWidth": 180,
+      "hideWhenNoLyrics": false
+    },
+    "schema": [
+      {
+        "key": "source",
+        "type": "enum",
+        "label": "Player",
+        "options": ["Auto", "any MPRIS player currently on the bus"],
+        "defaultValue": "Auto",
+        "description": "Which player to follow. Automatic follows whichever player is playing, and falls back to the first one available."
+      },
+      {
+        "key": "romanize",
+        "type": "enum",
+        "label": "Romanize",
+        "options": ["Off", "Replace", "Below"],
+        "defaultValue": "Off",
+        "description": "Transliterate lyrics to Latin script: replace the original line, or show the romanized line under it. Uses pykakasi when installed (Japanese kanji readings), otherwise kakasi or ICU uconv (kana, Hangul, Cyrillic, Greek, ...)."
+      },
+      {
+        "key": "translate",
+        "type": "enum",
+        "label": "Translate to",
+        "options": ["Off", "pt-BR", "pt-PT", "en", "es", "fr", "de", "it", "ja", "ko", "zh-CN", "ru"],
+        "defaultValue": "Off",
+        "description": "Translate the lyrics to this language (Google Translate). The translation appears under each line and, when available, in the bar label. Results are cached per track."
+      },
+      {
+        "key": "barLabel",
+        "type": "enum",
+        "label": "Bar label",
+        "options": ["Lyric line", "Track", "Icon only"],
+        "defaultValue": "Lyric line",
+        "description": "What the bar shows: the current lyric line (translation, else romanization, else the original, falling back to the track title), the track title, or just the music note."
+      },
+      {
+        "key": "maxLabelWidth",
+        "type": "integer",
+        "label": "Label width (px)",
+        "min": 60,
+        "max": 400,
+        "step": 10,
+        "defaultValue": 180,
+        "description": "Maximum width of the bar label before it starts scrolling."
+      },
+      {
+        "key": "hideWhenNoLyrics",
+        "type": "boolean",
+        "label": "Hide when the track has no lyrics",
+        "defaultValue": false,
+        "description": "Hide the widget while the current track has no synced lyrics instead of showing the track title."
+      }
+    ]
+  }
+}
