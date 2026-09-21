@@ -30,6 +30,7 @@ romanize.py         transliteration helper: pykakasi > kakasi > ICU uconv
 probe.qml           dev tool: loads service + card outside the bar (see below)
 install.sh          install/update/remove into the shell's plugin directory
 tests/lrc_test.js   parser tests, run with node
+tests/text_sinks_test.js  guard: every Text sink must declare its textFormat
 preview.png         marketplace preview image
 ```
 
@@ -57,6 +58,7 @@ only supported way to sync it.
 ```bash
 ./install.sh --restart     # copy the sources into the shell and restart it
 node tests/lrc_test.js     # parser tests
+node tests/text_sinks_test.js  # Text sinks must be plain text
 omarchy plugin validate .  # manifest validation
 ```
 
@@ -102,6 +104,17 @@ omarchy-shell super-player next              # exercise the controls
 
 ## Gotchas learned the hard way
 
+- **Every `Text` sets `textFormat: Text.PlainText`, always.** QML's default is
+  `Text.AutoText`: a lyric that looks like HTML is rendered as rich text, and an
+  `<img src="http://…">` in an LRCLIB response makes the long-lived shell fetch
+  that URL. Measured on the pre-fix tree, the shell requested the image; with
+  `PlainText` it never does. `tests/text_sinks_test.js` fails the build if a new
+  `Text` forgets the property, or opts back into `RichText`/`AutoText`.
+  Track title and artist come from MPRIS and are just as remote-controlled as
+  the lyrics, so they get the same treatment. Text handed to shell components
+  instead of our own `Text` (tooltip through `bar.showTooltip`, `Button`,
+  `Dropdown`, `PanelHero`) was audited in the installed shell sources and all of
+  those sinks already set `Text.PlainText` themselves.
 - `IpcHandler` needs `import Quickshell.Io`; without it the whole widget fails
   to compile with `IpcHandler is not a type`.
 - `show` is a reserved function name in Quickshell's IPC (calling it prints the

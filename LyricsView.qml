@@ -98,6 +98,7 @@ Item {
       Text {
         anchors.centerIn: parent
         visible: !artImage.visible
+        textFormat: Text.PlainText
         text: "󰝚"
         color: root.foreground
         font.family: root.fontFamily
@@ -117,6 +118,7 @@ Item {
 
         Text {
           anchors.centerIn: parent
+          textFormat: Text.PlainText
           text: root.playing ? "󰏤" : "󰐊"
           color: root.foreground
           font.family: root.fontFamily
@@ -296,6 +298,9 @@ Item {
         Text {
           id: lineText
           width: parent.width
+          // Remote content: the default AutoText would render HTML from the
+          // lyrics response as rich text (and load its resources).
+          textFormat: Text.PlainText
           text: line.mainText
           wrapMode: Text.WordWrap
           horizontalAlignment: Text.AlignHCenter
@@ -316,6 +321,7 @@ Item {
         Text {
           width: parent.width
           visible: line.romanizeMode === "Below" && line.showRomanized
+          textFormat: Text.PlainText
           text: line.romanizedText
           wrapMode: Text.WordWrap
           horizontalAlignment: Text.AlignHCenter
@@ -328,6 +334,7 @@ Item {
         Text {
           width: parent.width
           visible: line.showTranslated
+          textFormat: Text.PlainText
           text: line.translatedText
           wrapMode: Text.WordWrap
           horizontalAlignment: Text.AlignHCenter
@@ -395,6 +402,7 @@ Item {
 
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
+      textFormat: Text.PlainText
       text: "󰝚"
       color: Color.accent
       font.family: root.fontFamily
@@ -411,6 +419,7 @@ Item {
 
     Text {
       width: parent.width
+      textFormat: Text.PlainText
       text: root.emptyMessage
       color: root.dim
       font.family: root.fontFamily
