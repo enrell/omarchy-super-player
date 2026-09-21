@@ -138,3 +138,11 @@ omarchy-shell super-player next              # exercise the controls
   the user installed.
 - Don't add dependencies to the plugin itself: it should work with nothing but
   the Omarchy shell, and degrade gracefully when the optional tools are missing.
+- Never install or download anything from the plugin, and never extend
+  `sys.path` to a directory the plugin knows about. `romanize.py` imports
+  `pykakasi` from the interpreter's own site-packages and runs `kakasi`/`uconv`
+  from `PATH`, so every tool it executes comes from a distribution package that
+  the packager versioned and signed. The `~/.local/share/romanize` `sys.path`
+  trick plus the `uv pip install` line it went with were removed after the
+  marketplace security review flagged them: a mutable package index can serve
+  different code later than the code that was reviewed.

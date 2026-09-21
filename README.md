@@ -22,7 +22,8 @@ Media controls and synced lyrics for whatever is playing, as an
 - Omarchy with the Quickshell shell (`omarchy-shell`)
 - A player that exposes MPRIS (Spotify, mpv, Chromium/Brave, VLC, ...)
 - Internet access for the lyrics lookup (LRCLIB) and, when enabled, translation
-- Optional: `python3` plus `pykakasi` (best) or `kakasi` for romanization
+- Optional: `python-pykakasi` (best) or `kakasi` for romanization, both from
+  the Arch `extra` repository
 - Optional: a CJK font if you listen to CJK music (e.g. `noto-fonts-cjk`)
 
 ## Install
@@ -72,7 +73,7 @@ Optional leftovers from romanization/translation (nothing is installed by the
 plugin itself):
 
 ```bash
-rm -rf ~/.local/share/romanize       # pykakasi installed for romanization
+rm -rf ~/.local/share/romanize       # only if you installed pykakasi there for 1.0.0
 rm -rf ~/.local/share/kakasi ~/.local/bin/kakasi
 ```
 
@@ -191,17 +192,27 @@ Nothing is bundled and nothing is installed behind your back.
 | Translation (optional) | Google Translate public endpoint | `clients5.google.com` |
 | Romanization (optional) | `romanize.py` runs `python3` and uses `pykakasi`, `kakasi` or ICU `uconv`, whichever is available | local processes |
 
-Romanization tooling, best first:
+Romanization tooling, best first — all of it distribution packages, installed by
+you and never by the plugin:
 
 | Tool | Covers | Install |
 |---|---|---|
-| **pykakasi** | Japanese including kanji readings, split into word tokens | `uv pip install --target ~/.local/share/romanize pykakasi` |
+| **pykakasi** | Japanese including kanji readings, split into word tokens | `omarchy pkg add python-pykakasi` (repo `extra`) |
 | **kakasi** | Japanese including kanji readings (older dictionary, words segmented) | `omarchy pkg add kakasi` (repo `extra`) |
 | **uconv** (ICU) | kana, Hangul, Cyrillic, Greek, ... | comes with ICU |
 
-Installing any of them is a manual, optional step: the plugin never installs
-software by itself, it only picks whichever tool is already available and says
+`python-pykakasi` and `kakasi` both provide `/usr/bin/kakasi`, so install one of
+them, not both (pacman refuses the second one).
+
+Installing any of them is a manual, optional step: the plugin never installs or
+downloads anything, it only picks whichever tool is already available and says
 so in the settings. With none of them it romanizes nothing.
+
+The plugin imports `pykakasi` from the interpreter's own site-packages and runs
+the `kakasi` and `uconv` binaries from `PATH`. There is deliberately no pip or uv
+step in these instructions: an unpinned package index can serve different code
+later than the code reviewed for the marketplace, while a distribution package
+is versioned, checksummed and signed by the packager.
 
 ICU alone maps kanji to *pinyin*, which is wrong for Japanese, so with ICU only
 the kana are romanized and the kanji are left alone. Check what the plugin

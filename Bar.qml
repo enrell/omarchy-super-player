@@ -87,9 +87,9 @@ BarWidget {
   readonly property string romanizeHint: {
     if (media.romanize === "Off") return ""
     if (media.romanizeTool === "pykakasi") return "Romanization uses pykakasi (Japanese readings, words split into tokens)."
-    if (media.romanizeTool === "kakasi") return "Romanization uses kakasi. For better Japanese readings install pykakasi: uv pip install --target ~/.local/share/romanize pykakasi"
-    if (media.romanizeTool === "uconv") return "Romanization uses ICU only: kana, Hangul, Cyrillic, Greek... Japanese kanji are left as-is. Install pykakasi or kakasi for readings."
-    return "No transliterator found. Install python3 + pykakasi (or kakasi) to enable romanization."
+    if (media.romanizeTool === "kakasi") return "Romanization uses kakasi. For better Japanese readings install the python-pykakasi package: omarchy pkg add python-pykakasi"
+    if (media.romanizeTool === "uconv") return "Romanization uses ICU only: kana, Hangul, Cyrillic, Greek... Japanese kanji are left as-is. Install python-pykakasi or kakasi for readings."
+    return "No transliterator found. Install the python-pykakasi or kakasi package to enable romanization."
   }
 
   readonly property string translateHint: {

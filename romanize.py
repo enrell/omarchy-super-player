@@ -4,9 +4,9 @@
 One output line per input line, so the caller can map lines back by index.
 
 Tools, best first:
-  1. pykakasi  — Japanese readings with word tokens joined by spaces. It is a
-     pure Python package; the plugin looks for it in ~/.local/share/romanize
-     (see README: `uv pip install --target ~/.local/share/romanize pykakasi`).
+  1. pykakasi  — Japanese readings with word tokens joined by spaces. It comes
+     from the distribution package `python-pykakasi` (Arch `extra`) and is
+     imported from the system site-packages; nothing is downloaded here.
   2. kakasi    — two passes: `-w` segments words (kanji left alone), then the
      remaining kanji tokens are converted in one batch. Ships in Arch's extra
      repo, so it may be installed system wide or under ~/.local.
@@ -16,7 +16,6 @@ Tools, best first:
 
 With --tool the chosen tool is printed instead (used by the widget settings).
 """
-import os
 import re
 import shutil
 import subprocess
@@ -25,20 +24,15 @@ import sys
 KANA = re.compile(r"[\u3040-\u30ff\u30fc]")
 KANJI = re.compile(r"[\u4e00-\u9fff\u3005\u3006]")
 JAPANESE = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff\u3005\u3006]")
-PYKAKASI_PATH = os.path.expanduser("~/.local/share/romanize")
 
 
 def load_pykakasi():
+    # Plain import from the interpreter's own search path: the module has to be
+    # a distribution package, the plugin never installs or downloads anything.
     try:
         import pykakasi
     except ImportError:
-        if not os.path.isdir(PYKAKASI_PATH):
-            return None
-        sys.path.append(PYKAKASI_PATH)
-        try:
-            import pykakasi
-        except ImportError:
-            return None
+        return None
     return pykakasi.kakasi()
 
 
