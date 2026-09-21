@@ -1,6 +1,10 @@
-# AGENTS.md
+# Maintainer notes
 
-Guidance for AI agents (and humans) working on this repository.
+Notes for whoever works on the Super Player sources, human or agent. This file
+is deliberately not called `AGENTS.md`: the marketplace install path clones the
+whole repository into the shell's plugin directory, and a file with that name is
+ingested automatically as instructions by agent tooling started inside the
+installed plugin.
 
 ## What this is
 

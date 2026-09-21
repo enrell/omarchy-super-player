@@ -199,6 +199,10 @@ Romanization tooling, best first:
 | **kakasi** | Japanese including kanji readings (older dictionary, words segmented) | `omarchy pkg add kakasi` (repo `extra`) |
 | **uconv** (ICU) | kana, Hangul, Cyrillic, Greek, ... | comes with ICU |
 
+Installing any of them is a manual, optional step: the plugin never installs
+software by itself, it only picks whichever tool is already available and says
+so in the settings. With none of them it romanizes nothing.
+
 ICU alone maps kanji to *pinyin*, which is wrong for Japanese, so with ICU only
 the kana are romanized and the kanji are left alone. Check what the plugin
 picked with:
@@ -207,7 +211,14 @@ picked with:
 python3 ~/.config/omarchy/plugins/io.github.enrell.super-player/romanize.py --tool
 ```
 
+Every request is bounded: it is abandoned after 8 s and a reply larger than
+512 KiB is refused before it is parsed or cached, so a stalled or oversized
+response cannot hang the widget or grow the shell's memory.
+
 ## Development
+
+Repository conventions, the dev probe and the gotchas are in
+[docs/maintainer-notes.md](docs/maintainer-notes.md).
 
 ```bash
 ./install.sh --restart     # copy the sources and restart the shell

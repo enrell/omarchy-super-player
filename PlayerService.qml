@@ -112,6 +112,15 @@ QtObject {
   property int requestId: 0  // drops replies that belong to a previous track
   property int attempts: 0   // network retries for the current track
 
+  // The shell outlives thousands of tracks, so both caches keep the newest
+  // entries only.
+  readonly property int maxCachedTracks: 20
+
+  function trimCache(cache) {
+    const keys = Object.keys(cache)
+    while (keys.length > root.maxCachedTracks) delete cache[keys.shift()]
+  }
+
   // ------------------------------------------------------------------- clock
   // MPRIS only refreshes the position every ~0.5 s; a local clock interpolates
   // in between so the highlighted line does not jump around.
@@ -269,22 +278,20 @@ QtObject {
       + "&sl=auto&tl=" + encodeURIComponent(root.translate)
       + "&q=" + encodeURIComponent(root.lyricsText())
 
-    const xhr = new XMLHttpRequest()
-    xhr.open("GET", url)
-    xhr.setRequestHeader("User-Agent", "omarchy-super-player/1.0.0")
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== XMLHttpRequest.DONE) return
+    // Same bounded request path as the lyrics lookup: a stalled or oversized
+    // reply fails closed instead of hanging the shell or growing the cache.
+    root.get(url, function (status, body) {
       if (rid !== root.translateRequestId) return // stale reply
-      const translated = xhr.status === 200 ? root.parseTranslation(xhr.responseText) : ""
+      const translated = status === 200 ? root.parseTranslation(body) : ""
       if (translated === "") {
         root.translateStatus = "error"
         return
       }
       root.translationCache[key] = translated
+      root.trimCache(root.translationCache)
       root.translateStatus = "ok"
       root.applyTranslated(translated)
-    }
-    xhr.send()
+    })
   }
 
   // Response shape: [["translated text", "source language"], ...] — one entry
@@ -515,15 +522,93 @@ QtObject {
     }
   }
 
+  // ----------------------------------------------------------- remote limits
+  // Every reply is bounded: a connection that stalls must not hang the fetch,
+  // and an oversized body must never be parsed or cached. Real LRCLIB replies
+  // measure ~6 KiB for an exact lookup and ~150 KiB for a 20-result search, so
+  // 512 KiB is far above any legitimate payload and far below a memory hazard.
+  readonly property int requestTimeoutMs: 8000
+  readonly property int maxResponseBytes: 524288
+
+  // One deadline per in-flight request. Qt's own XMLHttpRequest.timeout does not
+  // fire when the server never answers, so the deadline is a real timer.
+  property Component requestDeadline: Component {
+    Timer {
+      property var expire
+      repeat: false
+      onTriggered: if (expire) expire()
+    }
+  }
+
+  // GET with a hard deadline and a response size cap. Every failure — timeout,
+  // network error, refused or oversized reply — reaches the callback as status 0
+  // with an empty body, so the callers keep their existing network-failure paths.
   function get(url, callback) {
     const xhr = new XMLHttpRequest()
     xhr.open("GET", url)
     // LRCLIB asks for a User-Agent identifying the client.
     xhr.setRequestHeader("User-Agent", "omarchy-super-player/1.0.0")
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== XMLHttpRequest.DONE) return
-      callback(xhr.status, xhr.responseText || "")
+
+    let settled = false
+    let deadline = root.requestDeadline.createObject(root, {
+      interval: root.requestTimeoutMs,
+      running: true,
+      expire: function () { finish(0, "", "timeout") }
+    })
+
+    function finish(status, body, reason) {
+      if (settled) return
+      settled = true
+      if (deadline) {
+        deadline.stop()
+        deadline.destroy()
+        deadline = null
+      }
+      if (reason === undefined) {
+        callback(status, body)
+        return
+      }
+      console.log("super-player: dropped a " + reason + " reply from " + url)
+      // Aborting from inside the readyState handler makes Qt's XMLHttpRequest
+      // crash while it is still reading the reply, so the transfer is cancelled
+      // on the next event loop turn instead. The reply is already refused.
+      Qt.callLater(function () { xhr.abort() })
+      callback(0, "")
     }
+
+    xhr.onreadystatechange = function () {
+      if (settled) return
+
+      // A reply that declares an oversize body is refused before any of it is read.
+      if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
+        const declared = Number(xhr.getResponseHeader("Content-Length"))
+        if (declared > root.maxResponseBytes) {
+          finish(0, "", "oversized")
+          return
+        }
+      }
+
+      // A body of unknown length (chunked) is cut off as soon as it overflows.
+      if (xhr.readyState === XMLHttpRequest.LOADING
+          && (xhr.responseText || "").length > root.maxResponseBytes) {
+        finish(0, "", "oversized")
+        return
+      }
+
+      if (xhr.readyState !== XMLHttpRequest.DONE) return
+      if (xhr.status !== 200) {
+        finish(xhr.status, "")
+        return
+      }
+      const body = xhr.responseText || ""
+      if (body.length > root.maxResponseBytes) {
+        finish(0, "", "oversized")
+        return
+      }
+      finish(200, body)
+    }
+
+    xhr.onerror = function () { finish(0, "", "failed") }
     xhr.send()
   }
 
@@ -536,6 +621,7 @@ QtObject {
     const synced = data.syncedLyrics ? Lrc.parse(data.syncedLyrics) : []
     const plain = data.plainLyrics || ""
     root.cache[root.trackKey] = { synced: synced, plain: plain }
+    root.trimCache(root.cache)
     root.applyLyrics(synced, plain)
   }
 
